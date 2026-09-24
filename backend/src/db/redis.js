@@ -18,12 +18,19 @@ if (rawRedisUrl.startsWith('https://')) {
 if (rawRedisUrl) {
   try {
     redisClient = new Redis(rawRedisUrl, {
-      maxRetriesPerRequest: 1,
+      keepAlive: 10000,
+      maxRetriesPerRequest: 3,
       retryStrategy(times) {
-        if (times > 3) {
-          return null; // Stop retrying after 3 attempts
+        if (times > 10) {
+          return null;
         }
-        return Math.min(times * 200, 1000);
+        return Math.min(times * 100, 2000);
+      },
+      reconnectOnError(err) {
+        if (err.message.includes('READONLY') || err.message.includes('EPIPE')) {
+          return true;
+        }
+        return false;
       },
       tls: rawRedisUrl.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined
     });
