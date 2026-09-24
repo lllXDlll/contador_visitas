@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Activity } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = rawApiUrl.trim().replace(/\/+$/, '');
 
 export default function App() {
   const [totalVisits, setTotalVisits] = useState(null);

@@ -6,11 +6,25 @@ const visitsRouter = require('./routes/visits');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const rawFrontendUrl = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.trim().replace(/^["']|["']$/g, '')
+  : 'http://localhost:5173';
+
+const allowedOrigins = rawFrontendUrl
+  .split(',')
+  .map(url => url.trim().replace(/\/+$/, ''));
 
 app.use(express.json());
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+    console.warn(`CORS blocked request from origin: ${origin}`);
+    return callback(null, false);
+  },
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
