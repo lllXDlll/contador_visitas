@@ -2,9 +2,22 @@ const Redis = require('ioredis');
 
 let redisClient = null;
 
-if (process.env.REDIS_URL) {
+let rawRedisUrl = process.env.REDIS_URL
+  ? process.env.REDIS_URL.trim().replace(/^["']|["']$/g, '')
+  : '';
+
+// Auto-fix URL protocol if user pasted https:// or // instead of rediss:// or redis://
+if (rawRedisUrl.startsWith('https://')) {
+  rawRedisUrl = 'rediss://' + rawRedisUrl.slice(8);
+} else if (rawRedisUrl.startsWith('http://')) {
+  rawRedisUrl = 'redis://' + rawRedisUrl.slice(7);
+} else if (rawRedisUrl.startsWith('//')) {
+  rawRedisUrl = 'rediss:' + rawRedisUrl;
+}
+
+if (rawRedisUrl) {
   try {
-    redisClient = new Redis(process.env.REDIS_URL, {
+    redisClient = new Redis(rawRedisUrl, {
       maxRetriesPerRequest: 1,
       retryStrategy(times) {
         if (times > 3) {
@@ -12,7 +25,7 @@ if (process.env.REDIS_URL) {
         }
         return Math.min(times * 200, 1000);
       },
-      tls: process.env.REDIS_URL.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined
+      tls: rawRedisUrl.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined
     });
 
     redisClient.on('connect', () => {
