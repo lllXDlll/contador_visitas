@@ -18,16 +18,18 @@ if (rawRedisUrl.startsWith('https://')) {
 if (rawRedisUrl) {
   try {
     redisClient = new Redis(rawRedisUrl, {
-      keepAlive: 10000,
-      maxRetriesPerRequest: 3,
+      keepAlive: 5000,
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: true,
       retryStrategy(times) {
-        if (times > 10) {
-          return null;
-        }
-        return Math.min(times * 100, 2000);
+        return Math.min(times * 200, 2000);
       },
       reconnectOnError(err) {
-        if (err.message.includes('READONLY') || err.message.includes('EPIPE')) {
+        if (
+          err.message.includes('READONLY') ||
+          err.message.includes('EPIPE') ||
+          err.message.includes('ECONNRESET')
+        ) {
           return true;
         }
         return false;
@@ -35,12 +37,15 @@ if (rawRedisUrl) {
       tls: rawRedisUrl.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined
     });
 
-    redisClient.on('connect', () => {
-      console.log('Redis connected successfully.');
+    redisClient.on('ready', () => {
+      console.log('Redis client is ready and connected.');
     });
 
     redisClient.on('error', (err) => {
-      console.warn('Redis error (app will fallback to PostgreSQL):', err.message);
+      // Suppress transient connection reset logs since fallback handles it
+      if (!err.message.includes('ECONNRESET') && !err.message.includes('EPIPE')) {
+        console.warn('Redis error (app will fallback to PostgreSQL):', err.message);
+      }
     });
   } catch (error) {
     console.warn('Failed to initialize Redis client:', error.message);
