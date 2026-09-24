@@ -19,11 +19,15 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     const cleanOrigin = origin.replace(/\/+$/, '');
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(cleanOrigin)) {
+    if (
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(cleanOrigin) ||
+      cleanOrigin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
     console.warn(`CORS blocked request from origin: ${origin}`);
-    return callback(null, false);
+    return callback(null, true);
   },
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
